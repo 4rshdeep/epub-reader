@@ -1,0 +1,1142 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Library</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  /* ---------- themes: set on <html data-theme>; theme tiles reuse the same selectors to preview themselves ---------- */
+  :root, [data-theme] {
+    --paper:#ffffff; --chrome:#ffffff; --ink:#1c1c1f; --muted:#6c6c73; --rule:#e7e7eb; --hover:#0000000a;
+    --accent:#2f4bff; --line:#edf0ff; --word:#c9d2ff;
+    --yellow:#ffe066; --green:#a8e6a3; --pink:#f9a8d4; --purple:#d4bbff; --blue:#a5d8ff;
+    --shadow:0 1px 2px rgb(0 0 0 / .06), 0 12px 32px -6px rgb(20 30 90 / .18);
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    --book-font:var(--serif); --book-weight:400;
+    --fs:21px;
+  }
+  [data-theme=calm] {
+    --paper:#efe4d1; --chrome:#f4ebdc; --ink:#3b3127; --muted:#86765f; --rule:#ddcfb6; --hover:#3b31270f;
+    --accent:#7a5634; --line:#e5d6bb; --word:#d9c29b;
+    --book-font:"Avenir Next","Avenir",-apple-system,sans-serif;
+    --shadow:0 1px 2px rgb(60 40 20 / .08), 0 12px 32px -6px rgb(60 40 20 / .22);
+  }
+  [data-theme=paper] {
+    --paper:#ebebea; --chrome:#f2f2f1; --ink:#232323; --muted:#6f6f6d; --rule:#d9d9d7; --line:#dfdfdc; --word:#c8c8c4;
+    --accent:#3a3a3a; --book-font:ui-serif,"New York",Georgia,serif;
+  }
+  [data-theme=bold] { --book-font:-apple-system,BlinkMacSystemFont,system-ui,sans-serif; --book-weight:600; --ink:#111; }
+  [data-theme=focus] {
+    --paper:#fffcf4; --chrome:#fffdf8; --ink:#1d1b17; --muted:#77705f; --rule:#ece6d6; --line:#f6eedb; --word:#ecdcb5;
+    --accent:#8a6a1f; --book-font:Charter,"Bitstream Charter",Georgia,serif;
+  }
+  [data-theme=quiet] {
+    --paper:#3a3a3d; --chrome:#424245; --ink:#bdbdc2; --muted:#8e8e94; --rule:#4c4c50; --hover:#ffffff10;
+    --accent:#9aa6ff; --line:#47474c; --word:#5a5f82;
+    --yellow:rgb(255 214 10 / .30); --green:rgb(80 200 120 / .28); --pink:rgb(240 100 170 / .30);
+    --purple:rgb(160 120 255 / .32); --blue:rgb(80 160 255 / .30);
+    --shadow:0 0 0 1px #ffffff12, 0 12px 32px -6px rgb(0 0 0 / .5);
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink);
+         font:15px/1.4 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; -webkit-font-smoothing:antialiased; }
+  button { font:inherit; color:inherit; background:none; border:0; cursor:pointer; border-radius:8px; }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .i { width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; display:block; flex:none; }
+  [hidden] { display:none !important; }
+  @media (prefers-reduced-motion: reduce) { * { transition:none !important; animation:none !important; scroll-behavior:auto !important; } }
+
+  /* ---------- library ---------- */
+  #library { max-width:1120px; margin:0 auto; padding:56px 32px 96px; }
+  .lib-head { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:44px; }
+  .lib-head h1 { font:600 42px/1.05 var(--serif); margin:0; }
+  .lib-head p { margin:8px 0 0; color:var(--muted); }
+  .btn { background:var(--accent); color:var(--chrome); padding:10px 18px 10px 14px; border-radius:999px; font-weight:600;
+         display:inline-flex; gap:6px; align-items:center; white-space:nowrap; }
+  #grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:44px 28px; }
+  .book { position:relative; min-width:0; }
+  .cover { display:block; aspect-ratio:2/3; border-radius:3px 6px 6px 3px; overflow:hidden; background:var(--rule);
+           box-shadow:0 1px 2px rgb(0 0 0 / .12), 0 14px 28px -10px rgb(0 0 0 / .35); transition:transform .2s ease; position:relative; }
+  .cover::after { content:""; position:absolute; inset:0 auto 0 0; width:6px; background:linear-gradient(90deg, rgb(0 0 0 / .18), transparent); }
+  .cover:hover { transform:translateY(-4px); }
+  .cover img { width:100%; height:100%; object-fit:cover; display:block; }
+  .gen { height:100%; display:flex; flex-direction:column; justify-content:space-between; padding:18px 16px;
+         background:hsl(var(--h) 30% 32%); color:#fff; font:600 18px/1.2 var(--serif); }
+  .gen small { font:13px/1.3 var(--serif); opacity:.75; }
+  .book .t { margin-top:14px; font-weight:600; font-size:14px; line-height:1.3;
+             display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .book .a { color:var(--muted); font-size:13px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .prog { height:3px; background:var(--rule); border-radius:2px; margin-top:10px; overflow:hidden; }
+  .prog i { display:block; height:100%; background:var(--accent); }
+  .pct { font-size:12px; color:var(--muted); margin-top:6px; font-variant-numeric:tabular-nums; }
+  .rm { position:absolute; top:8px; right:8px; width:30px; height:30px; border-radius:50%; background:rgb(0 0 0 / .6);
+        color:#fff; display:grid; place-items:center; opacity:0; transition:opacity .15s; }
+  .rm .i { width:16px; height:16px; }
+  .book:hover .rm, .rm:focus-visible { opacity:1; }
+  .empty { border:1.5px dashed var(--rule); border-radius:18px; padding:72px 24px; text-align:center; color:var(--muted); }
+  .empty h2 { font:600 24px/1.2 var(--serif); color:var(--ink); margin:0 0 8px; }
+  .empty .btn { margin-top:20px; }
+  body.drag #library { outline:2px dashed var(--accent); outline-offset:-16px; border-radius:24px; }
+
+  /* ---------- reader chrome ---------- */
+  #top { position:sticky; top:0; z-index:20; height:64px; display:flex; align-items:center; gap:10px; padding:0 16px;
+         background:var(--chrome); border-bottom:1px solid var(--rule); }
+  #top .back { display:flex; align-items:center; gap:2px; padding:8px 12px 8px 6px; color:var(--muted); font-weight:500; }
+  #top .back:hover, .tools button:hover { background:var(--hover); color:var(--ink); }
+  .ttl { min-width:0; flex:1; padding-left:4px; border-left:1px solid var(--rule); padding-left:14px; }
+  .ttl b { display:block; font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ttl span { display:block; color:var(--muted); font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tools { display:flex; gap:2px; }
+  .tools button { height:38px; min-width:38px; padding:0 10px; color:var(--muted); font-weight:600; display:grid; place-items:center; }
+  .tools .narrow { display:none; }
+
+  #rail { position:fixed; left:20px; top:92px; z-index:15; display:flex; flex-direction:column; gap:4px; padding:7px;
+          background:var(--chrome); border-radius:999px; box-shadow:var(--shadow); transition:left .24s ease; }
+  #rail button { width:44px; height:44px; border-radius:50%; display:grid; place-items:center; }
+  #rail button:hover { background:var(--hover); }
+  #rail button[aria-pressed=true] { background:var(--line); color:var(--accent); }
+
+  #side { position:fixed; left:0; top:64px; bottom:0; width:320px; z-index:16; background:var(--chrome);
+          border-right:1px solid var(--rule); transform:translateX(-100%); visibility:hidden;
+          transition:transform .24s ease, visibility 0s .24s; display:flex; flex-direction:column; }
+  body.side-open #side { transform:none; visibility:visible; transition:transform .24s ease; }
+  body.side-open #rail { left:340px; }
+  .side-tabs { display:flex; align-items:center; gap:4px; padding:12px; border-bottom:1px solid var(--rule); }
+  .side-tabs button { padding:7px 14px; border-radius:999px; color:var(--muted); font-weight:600; }
+  .side-tabs button[aria-selected=true] { background:var(--line); color:var(--accent); }
+  #sideClose { margin-left:auto; padding:7px; }
+  .side-body { overflow:auto; flex:1; padding:8px; overscroll-behavior:contain; }
+  #toc button { display:block; width:100%; text-align:left; padding:9px 12px 9px calc(12px + var(--d) * 16px); line-height:1.35; }
+  #toc button:hover, .note-item:hover { background:var(--hover); }
+  #toc button[aria-current=true] { background:var(--line); color:var(--accent); font-weight:600; }
+  .side-empty { color:var(--muted); padding:16px 12px; line-height:1.5; }
+  .note-item { display:block; width:100%; text-align:left; padding:12px 12px 12px 14px; margin-bottom:4px; border-radius:10px; }
+  .note-item q { display:block; quotes:none; font:16px/1.45 var(--serif); border-left:3px solid var(--c); padding-left:10px;
+                 display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
+  .note-item p { margin:8px 0 0 13px; color:var(--muted); white-space:pre-wrap; }
+
+  /* ---------- reading ---------- */
+  main { position:relative; isolation:isolate; transition:margin-left .24s ease, left .24s ease; }
+  #book { max-width:34em; margin:0 auto; padding:56px 24px 60vh; font:var(--book-weight) var(--fs)/1.75 var(--book-font); }
+  #book p { margin:0 0 1.1em; }
+  #book h3 { font-size:1.3em; line-height:1.3; margin:2.2em 0 .9em; font-weight:600; }
+  #book .loading { color:var(--muted); font-family:inherit; }
+  #bar { position:absolute; background:var(--line); border-radius:6px; z-index:-1; transition:top .2s ease, height .2s ease; }
+
+  /* pages layout: the book flows into CSS columns; a spread = 2 columns, turned via scrollLeft */
+  body.pages { overflow:hidden; }
+  body.pages main { position:fixed; top:64px; left:0; right:0; bottom:0; }
+  body.pages #book { position:absolute; inset:40px 96px 132px 120px; max-width:none; margin:0; padding:0;
+                     columns:2; column-gap:96px; column-fill:auto; overflow:hidden; }
+  body.pages #book h3 { break-after:avoid; }
+  .turn { display:none; position:absolute; top:calc(50% - 60px); width:40px; height:72px; color:var(--muted); place-items:center; }
+  .turn:hover { background:var(--hover); color:var(--ink); }
+  .turn .i { width:24px; height:24px; }
+  body.pages .turn { display:grid; }
+  #prevPage { left:64px; } #nextPage { right:36px; }
+  .seg { display:flex; padding:3px; border-radius:10px; background:var(--hover); margin-right:8px; }
+  .seg button { height:32px; padding:0 12px; border-radius:7px; color:var(--muted); font-weight:600; }
+  .seg button[aria-checked=true] { background:var(--chrome); color:var(--ink); box-shadow:0 1px 3px rgb(0 0 0 / .12); }
+  /* highlights are drawn as boxes behind the text (CSS ::highlight doesn't paint in the app's WebKit view) */
+  #marks i, #curw { position:absolute; z-index:-1; border-radius:4px; pointer-events:none; }
+  #marks i.note { box-shadow:inset 0 -2px 0 var(--muted); }
+  #curw { background:var(--word); transition:left .08s ease, top .08s ease, width .08s ease; }
+
+  #resume { position:fixed; left:50%; bottom:122px; transform:translateX(-50%); z-index:20; background:var(--chrome);
+            color:var(--accent); font-weight:600; padding:9px 16px; border-radius:999px; box-shadow:var(--shadow); }
+
+  #toast { position:fixed; left:50%; top:96px; transform:translateX(-50%); z-index:30; background:var(--ink); color:var(--paper);
+           font-weight:600; font-variant-numeric:tabular-nums; padding:8px 16px; border-radius:999px; pointer-events:none; }
+
+  /* ---------- player ---------- */
+  #player { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); z-index:20; display:flex; align-items:center;
+            gap:4px; padding:10px 14px; background:var(--chrome); border-radius:999px; box-shadow:var(--shadow); overflow:hidden;
+            transition:opacity .3s ease, transform .3s ease; }
+  body.idle #player { opacity:0; transform:translate(-50%, 20px); pointer-events:none; } /* hides after 2.5s without mouse movement */
+  body.idle #resume { bottom:40px; }
+  #pprog { position:absolute; left:0; right:0; top:0; height:3px; }
+  #pprog i { display:block; height:100%; width:0; background:var(--accent); transition:width .3s; }
+  #player .ic { width:48px; height:48px; border-radius:50%; display:grid; place-items:center; }
+  #player .ic:hover { background:var(--hover); }
+  #player .ic .i { width:24px; height:24px; }
+  #play { position:relative; width:62px; height:62px; border-radius:50%; background:var(--accent); color:var(--chrome);
+          display:grid; place-items:center; margin:0 8px; }
+  #play .i { width:26px; height:26px; fill:currentColor; stroke:none; }
+  #play.busy::after { content:""; position:absolute; inset:4px; border-radius:50%; border:3px solid rgb(255 255 255 / .25);
+                      border-top-color:#fff; animation:spin .8s linear infinite; }
+  @keyframes spin { to { transform:rotate(1turn); } }
+  #pct { font-size:13px; color:var(--muted); font-variant-numeric:tabular-nums; width:46px; text-align:center; }
+  #speedBtn { font-weight:700; font-size:15px; font-variant-numeric:tabular-nums; }
+  .flag { font-size:25px; line-height:1; }
+
+  /* ---------- popovers ---------- */
+  .pop { position:fixed; z-index:40; background:var(--chrome); border-radius:16px; box-shadow:var(--shadow), 0 0 0 1px var(--rule); padding:10px; }
+  #pop { width:252px; }
+  .sw-row { display:flex; gap:8px; justify-content:space-between; padding:4px 6px 12px; border-bottom:1px solid var(--rule); margin-bottom:6px; }
+  .sw { width:30px; height:30px; border-radius:50%; background:var(--c); box-shadow:inset 0 0 0 1px rgb(0 0 0 / .1); display:grid; place-items:center; }
+  .sw[aria-pressed=true] { box-shadow:0 0 0 2px var(--chrome), 0 0 0 4px var(--c); }
+  #unhl { --c:var(--hover); color:var(--muted); }
+  #unhl .i { width:16px; height:16px; }
+  .acts button, .menu-list button { display:flex; align-items:center; gap:12px; width:100%; padding:10px; text-align:left; font-size:15px; }
+  .acts button:hover, .menu-list button:hover { background:var(--hover); }
+  .noteedit textarea { width:100%; font:15px/1.45 inherit; border:1px solid var(--rule); border-radius:10px; padding:10px;
+                       background:var(--paper); color:var(--ink); resize:vertical; margin:2px 0 8px; }
+  .noteedit .row { display:flex; justify-content:flex-end; gap:6px; }
+  .noteedit .row button { padding:7px 12px; font-weight:600; }
+  .noteedit .row .btn { padding:7px 14px; }
+  #menu { width:240px; }
+  #themes { width:320px; padding:14px 16px 16px; }
+  .th-title { text-align:center; font-weight:600; color:var(--muted); padding-bottom:12px; border-bottom:1px solid var(--rule); margin-bottom:14px; }
+  .th-row { display:flex; gap:10px; margin-bottom:14px; }
+  .th-size { flex:1; display:flex; background:var(--hover); border-radius:999px; }
+  .th-size button { flex:1; height:44px; border-radius:999px; font-family:var(--book-font); }
+  .th-size button + button { border-left:1px solid var(--rule); border-radius:0 999px 999px 0; font-size:21px; }
+  .th-size button:first-child { border-radius:999px 0 0 999px; font-size:14px; }
+  .th-size button:hover, #autoDark:hover { background:var(--hover); }
+  #autoDark { width:64px; height:44px; border-radius:999px; background:var(--hover); display:grid; place-items:center; }
+  #autoDark[aria-pressed=true] { background:var(--ink); color:var(--paper); }
+  .th-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
+  .tile { aspect-ratio:1.15; border-radius:14px; background:var(--paper); color:var(--ink); border:1px solid var(--rule);
+          display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; }
+  .tile b { font:var(--book-weight) 30px/1 var(--book-font); }
+  .tile span { font:var(--book-weight) 13px/1.2 var(--book-font); }
+  .tile[aria-checked=true] { border:2.5px solid var(--accent); }
+  .menu-list button[aria-checked=true] { color:var(--accent); font-weight:600; }
+  .menu-list .flag { font-size:20px; }
+  .speeds { display:grid; grid-template-columns:repeat(4, 1fr); gap:4px; margin-bottom:10px; }
+  .speeds button { padding:8px 0; font-weight:600; font-variant-numeric:tabular-nums; }
+  .speeds button:hover { background:var(--hover); }
+  .speeds button[aria-checked=true] { background:var(--line); color:var(--accent); }
+  #menu input[type=range] { width:100%; accent-color:var(--accent); }
+
+  @media (min-width: 1180px) { body.side-open main { margin-left:320px; } body.side-open.pages main { margin-left:0; left:320px; } }
+  @media (max-width: 1000px) { body.pages #book { columns:1; inset:32px 64px 124px 112px; } #nextPage { right:16px; } }
+  @media (max-width: 760px) { body.pages #book { inset:24px 48px 116px; } #prevPage { left:4px; } #nextPage { right:4px; } }
+  @media (max-width: 760px) {
+    #rail { display:none; }
+    .tools .narrow { display:grid; }
+    #library { padding:32px 16px 80px; }
+    .lib-head h1 { font-size:32px; }
+    #grid { grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); gap:32px 16px; }
+    #book { padding:32px 16px 60vh; }
+    #player { bottom:12px; padding:8px 10px; gap:0; }
+    #pct { display:none; }
+    #side { width:min(320px, 88vw); }
+  }
+</style>
+
+<!-- ======== LIBRARY ======== -->
+<section id="library" hidden>
+  <div class="lib-head">
+    <div><h1>Library</h1><p id="libCount"></p></div>
+    <button class="btn" id="addBtn"><span data-i="plus"></span>Add book</button>
+  </div>
+  <div id="grid"></div>
+  <div class="empty" id="empty" hidden>
+    <h2>Your library is empty</h2>
+    <div>Add an EPUB, or drop one anywhere on this page.</div>
+    <button class="btn" onclick="$('#fileIn').click()"><span data-i="plus"></span>Add book</button>
+  </div>
+  <input type="file" id="fileIn" accept=".epub,application/epub+zip" multiple hidden>
+</section>
+
+<!-- ======== READER ======== -->
+<section id="reader" hidden>
+  <header id="top">
+    <button class="back" onclick="location.hash=''"><span data-i="chev"></span>Library</button>
+    <div class="ttl"><b id="title"></b><span id="author"></span></div>
+    <div class="tools">
+      <div class="seg" role="radiogroup" aria-label="Layout">
+        <button role="radio" data-layout="scroll" aria-checked="true">Scroll</button>
+        <button role="radio" data-layout="pages" aria-checked="false">Pages</button>
+      </div>
+      <button class="narrow" data-panel="toc" aria-label="Contents"><span data-i="list"></span></button>
+      <button class="narrow" data-panel="notes" aria-label="Notes"><span data-i="hl"></span></button>
+      <button id="themesBtn" aria-label="Themes and settings" title="Themes and settings" style="font-size:17px; display:flex; align-items:baseline">A<span style="font-size:13px">a</span></button>
+    </div>
+  </header>
+
+  <nav id="rail" aria-label="Book tools">
+    <button data-panel="toc" aria-label="Contents" aria-pressed="false" title="Contents"><span data-i="list"></span></button>
+    <button data-panel="notes" aria-label="Highlights and notes" aria-pressed="false" title="Highlights and notes"><span data-i="hl"></span></button>
+  </nav>
+
+  <aside id="side" aria-label="Sidebar">
+    <div class="side-tabs" role="tablist">
+      <button role="tab" data-tab="toc" aria-selected="true">Contents</button>
+      <button role="tab" data-tab="notes" aria-selected="false">Notes <span id="ncount"></span></button>
+      <button id="sideClose" aria-label="Close sidebar"><span data-i="x"></span></button>
+    </div>
+    <div class="side-body"><div id="toc"></div><div id="notes" hidden></div></div>
+  </aside>
+
+  <main>
+    <div id="bar"></div>
+    <div id="marks"></div>
+    <div id="curw"></div>
+    <div id="book"></div>
+    <button class="turn" id="prevPage" aria-label="Previous page"><span data-i="chev"></span></button>
+    <button class="turn" id="nextPage" aria-label="Next page"><span data-i="chevR"></span></button>
+  </main>
+
+  <button id="resume" hidden>Back to reading position</button>
+  <div id="toast" role="status" hidden></div>
+
+  <div id="player">
+    <div id="pprog"><i></i></div>
+    <span id="pct">0%</span>
+    <button class="ic" id="voiceBtn" aria-label="Voice"><span class="flag">🇺🇸</span></button>
+    <button class="ic" id="back" aria-label="Back 10 seconds"><span data-i="back10"></span></button>
+    <button id="play" aria-label="Play" title="Play / pause (Space)"><span data-i="play"></span></button>
+    <button class="ic" id="fwd" aria-label="Forward 10 seconds"><span data-i="fwd10"></span></button>
+    <button class="ic" id="speedBtn" aria-label="Speed" title="Speed (slower [  ·  faster ])">1×</button>
+  </div>
+
+  <div class="pop" id="pop" hidden>
+    <div class="acts-wrap">
+      <div class="sw-row">
+        <button class="sw" id="unhl" aria-label="Remove highlight"><span data-i="x"></span></button>
+        <button class="sw" data-c="yellow" style="--c:var(--yellow)" aria-label="Yellow"></button>
+        <button class="sw" data-c="green" style="--c:var(--green)" aria-label="Green"></button>
+        <button class="sw" data-c="pink" style="--c:var(--pink)" aria-label="Pink"></button>
+        <button class="sw" data-c="purple" style="--c:var(--purple)" aria-label="Purple"></button>
+        <button class="sw" data-c="blue" style="--c:var(--blue)" aria-label="Blue"></button>
+      </div>
+      <div class="acts">
+        <button id="actRead"><span data-i="vol"></span>Read from here</button>
+        <button id="actCopy"><span data-i="copy"></span><span>Copy</span></button>
+        <button id="actNote"><span data-i="note"></span><span>Add a note</span></button>
+      </div>
+    </div>
+    <div class="noteedit" hidden>
+      <textarea id="noteText" rows="4" placeholder="Write a note…"></textarea>
+      <div class="row"><button id="noteCancel">Cancel</button><button class="btn" id="noteSave">Save note</button></div>
+    </div>
+  </div>
+
+  <div class="pop" id="menu" hidden></div>
+
+  <div class="pop" id="themes" hidden>
+    <div class="th-title">Themes &amp; Settings</div>
+    <div class="th-row">
+      <div class="th-size"><button id="smaller" aria-label="Smaller text">A</button><button id="bigger" aria-label="Larger text">A</button></div>
+      <button id="autoDark" aria-pressed="false" aria-label="Use Quiet when the Mac is in dark mode" title="Use Quiet when the Mac is in dark mode">
+        <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 0 0 17z" fill="currentColor"/></svg>
+      </button>
+    </div>
+    <div class="th-grid" role="radiogroup" aria-label="Theme">
+      <button class="tile" role="radio" data-theme="original"><b>Aa</b><span>Original</span></button>
+      <button class="tile" role="radio" data-theme="quiet"><b>Aa</b><span>Quiet</span></button>
+      <button class="tile" role="radio" data-theme="paper"><b>Aa</b><span>Paper</span></button>
+      <button class="tile" role="radio" data-theme="bold"><b>Aa</b><span>Bold</span></button>
+      <button class="tile" role="radio" data-theme="calm"><b>Aa</b><span>Calm</span></button>
+      <button class="tile" role="radio" data-theme="focus"><b>Aa</b><span>Focus</span></button>
+    </div>
+  </div>
+</section>
+
+<script>
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const ls = (k, v) => { try { return v === undefined ? localStorage.getItem(k) : localStorage.setItem(k, v); } catch {} };
+
+// ---------- icons ----------
+const ICONS = {
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  chev: '<path d="m15 18-6-6 6-6"/>',
+  chevR: '<path d="m9 18 6-6-6-6"/>',
+  x: '<path d="M18 6 6 18M6 6l12 12"/>',
+  list: '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r=".6"/><circle cx="4.5" cy="12" r=".6"/><circle cx="4.5" cy="18" r=".6"/>',
+  hl: '<path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>',
+  play: '<path d="M8 5.5v13a1 1 0 0 0 1.5.86l11-6.5a1 1 0 0 0 0-1.72l-11-6.5A1 1 0 0 0 8 5.5z"/>',
+  pause: '<rect x="6" y="4.5" width="4.2" height="15" rx="1.2"/><rect x="13.8" y="4.5" width="4.2" height="15" rx="1.2"/>',
+  back10: '<path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5"/><text x="12.5" y="15.6" font-size="8" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none" font-family="system-ui">10</text>',
+  fwd10: '<path d="M21 12a9 9 0 1 1-2.6-6.4L21 8"/><path d="M21 3v5h-5"/><text x="11.5" y="15.6" font-size="8" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none" font-family="system-ui">10</text>',
+  vol: '<path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/>',
+  copy: '<rect width="13" height="13" x="8" y="8" rx="2"/><path d="M4 16a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2"/>',
+  note: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M12 7v6M9 10h6"/>',
+};
+const icon = n => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]}</svg>`;
+const paintIcons = (root = document) => root.querySelectorAll('[data-i]').forEach(e => e.outerHTML = icon(e.dataset.i));
+paintIcons();
+
+const VOICES = [
+  ['af_heart', 'Heart', '🇺🇸'], ['af_bella', 'Bella', '🇺🇸'], ['af_nicole', 'Nicole (soft)', '🇺🇸'], ['af_aoede', 'Aoede', '🇺🇸'],
+  ['am_michael', 'Michael', '🇺🇸'], ['am_fenrir', 'Fenrir', '🇺🇸'], ['am_puck', 'Puck', '🇺🇸'],
+  ['bf_emma', 'Emma', '🇬🇧'], ['bf_isabella', 'Isabella', '🇬🇧'], ['bm_george', 'George', '🇬🇧'], ['bm_fable', 'Fable', '🇬🇧'],
+];
+const COLORS = ['yellow', 'green', 'pink', 'purple', 'blue'];
+let voice = VOICES.find(v => v[0] === ls('voice')) ? ls('voice') : 'af_heart';
+let rate = +ls('rate') || 1;
+let fs = +ls('fs') || 21;
+
+// ---------- server storage ----------
+const put = (name, body, keepalive) => fetch('/library/' + name, { method: 'PUT', body, keepalive })
+  .then(r => { if (!r.ok) throw new Error(`saving ${name} failed (${r.status})`); });
+const getJSON = url => fetch(url, { cache: 'no-store' }).then(r => r.ok ? r.json() : null);
+
+// ---------- EPUB parsing ----------
+const BLOCKS = 'p,h1,h2,h3,h4,h5,h6,li,blockquote,pre,dt,dd,div';
+const xml = s => new DOMParser().parseFromString(s, 'application/xml');
+const tags = (doc, n) => [...doc.getElementsByTagNameNS('*', n)];
+const resolve = (href, base) => {
+  const u = new URL(href, 'http://x/' + base);
+  return decodeURIComponent(u.pathname.slice(1)) + (u.hash ? '#' + decodeURIComponent(u.hash.slice(1)) : '');
+};
+
+async function readMeta(zip) {
+  const read = p => zip.file(p)?.async('string');
+  const container = await read('META-INF/container.xml');
+  if (!container) throw new Error('not an EPUB (no META-INF/container.xml)');
+  const opfPath = tags(xml(container), 'rootfile')[0].getAttribute('full-path');
+  const opf = xml(await read(opfPath));
+  const items = {};
+  for (const i of tags(opf, 'item')) items[i.getAttribute('id')] = {
+    path: resolve(i.getAttribute('href'), opfPath), type: i.getAttribute('media-type') || '', props: i.getAttribute('properties') || '',
+  };
+  const coverId = tags(opf, 'meta').find(m => m.getAttribute('name') === 'cover')?.getAttribute('content');
+  const cover = Object.values(items).find(i => /\bcover-image\b/.test(i.props)) || items[coverId];
+  return {
+    read, opfPath, opf, items,
+    title: tags(opf, 'title')[0]?.textContent.trim(),
+    author: tags(opf, 'creator').map(c => c.textContent.trim()).join(', '),
+    cover: cover?.type.startsWith('image/') ? cover : null,
+  };
+}
+
+async function readToc(meta) { // -> [{label, depth, target:"path#frag"}] from EPUB3 nav or EPUB2 ncx
+  const nav = Object.values(meta.items).find(i => /\bnav\b/.test(i.props));
+  if (nav) {
+    const doc = new DOMParser().parseFromString(await meta.read(nav.path), 'application/xhtml+xml');
+    const navs = tags(doc, 'nav');
+    const toc = navs.find(n => (n.getAttributeNS('http://www.idpf.org/2007/ops', 'type') || n.getAttribute('epub:type')) === 'toc') || navs[0];
+    if (toc) {
+      const out = tags(toc, 'a').filter(a => a.getAttribute('href')).map(a => {
+        let d = -1; for (let e = a; e && e !== toc; e = e.parentElement) if (e.localName === 'ol') d++;
+        return { label: a.textContent.trim().replace(/\s+/g, ' '), depth: Math.max(0, d), target: resolve(a.getAttribute('href'), nav.path) };
+      });
+      if (out.length) return out;
+    }
+  }
+  const ncxId = tags(meta.opf, 'spine')[0]?.getAttribute('toc');
+  const ncx = meta.items[ncxId] || Object.values(meta.items).find(i => i.type === 'application/x-dtbncx+xml');
+  if (!ncx) return [];
+  return tags(xml(await meta.read(ncx.path)), 'navPoint').map(np => {
+    let d = 0; for (let e = np.parentElement; e; e = e.parentElement) if (e.localName === 'navPoint') d++;
+    return { label: tags(np, 'text')[0]?.textContent.trim() || '', depth: d, target: resolve(tags(np, 'content')[0]?.getAttribute('src') || '', ncx.path) };
+  });
+}
+
+async function parseBook(zip) {
+  const meta = await readMeta(zip);
+  const toc = await readToc(meta).catch(() => []);
+  const wanted = new Set(toc.map(t => t.target));
+  const paras = [], at = {}; // at["path"] / at["path#id"] -> paragraph index
+  for (const ref of tags(meta.opf, 'itemref')) {
+    const item = meta.items[ref.getAttribute('idref')];
+    const src = item && await meta.read(item.path);
+    if (!src) continue;
+    let doc = new DOMParser().parseFromString(src, 'application/xhtml+xml');
+    if (doc.querySelector('parsererror')) doc = new DOMParser().parseFromString(src, 'text/html');
+    if (!doc.body) continue;
+    at[item.path] = paras.length;
+    // ponytail: leaf blocks only; a div mixing loose text with child <p>s loses the loose text
+    const found = [...doc.body.querySelectorAll(BLOCKS)].filter(e => !e.querySelector(BLOCKS));
+    const blocks = found.length ? found : [doc.body], index = new Map();
+    for (const b of blocks) {
+      index.set(b, paras.length);
+      const words = b.textContent.split(/\s+/).filter(Boolean);
+      if (words.length) paras.push({ h: /^h\d$/i.test(b.localName), words });
+    }
+    for (const el of doc.body.querySelectorAll('[id]')) {
+      const key = item.path + '#' + el.id;
+      if (!wanted.has(key)) continue;
+      let b = el; while (b && !index.has(b)) b = b.parentElement;           // anchor inside a block
+      b ??= blocks.find(x => el.compareDocumentPosition(x) & Node.DOCUMENT_POSITION_FOLLOWING); // wrapper / empty anchor
+      at[key] = b ? index.get(b) : paras.length;
+    }
+  }
+  let sections = toc.map(t => ({ label: t.label, depth: t.depth, p: at[t.target] ?? at[t.target.split('#')[0]] }))
+    .filter(s => s.label && s.p !== undefined && s.p < paras.length);
+  if (!sections.length) // no usable TOC: fall back to headings in the text
+    sections = paras.flatMap((x, p) => x.h ? [{ label: x.words.join(' ').slice(0, 90), depth: 0, p }] : []);
+  return { paras, sections };
+}
+
+// ---------- library ----------
+async function showLibrary() {
+  stopReading();
+  document.title = 'Library';
+  document.body.classList.remove('pages');
+  $('#reader').hidden = true; $('#library').hidden = false;
+  const books = ((await getJSON('/api/books')) || []).sort((a, b) => (b.opened || b.added) - (a.opened || a.added));
+  $('#libCount').textContent = books.length ? `${books.length} book${books.length > 1 ? 's' : ''}` : '';
+  $('#empty').hidden = books.length > 0;
+  $('#grid').innerHTML = books.map(b => {
+    const pct = b.total > 1 ? Math.round(b.p / (b.total - 1) * 100) : 0;
+    const status = !b.opened ? 'New' : pct >= 100 ? 'Finished' : `${pct}%`;
+    return `<div class="book">
+      <a class="cover" href="#/book/${b.id}" aria-label="Open ${esc(b.title)}">${b.cover
+        ? `<img src="/library/${b.cover}" alt="" loading="lazy">`
+        : `<div class="gen" style="--h:${parseInt(b.id.slice(0, 6), 16) % 360}"><span>${esc(b.title)}</span><small>${esc(b.author)}</small></div>`}</a>
+      <button class="rm" data-id="${b.id}" data-title="${esc(b.title)}" aria-label="Remove ${esc(b.title)}">${icon('x')}</button>
+      <div class="t">${esc(b.title)}</div><div class="a">${esc(b.author) || '&nbsp;'}</div>
+      <div class="prog"><i style="width:${pct}%"></i></div><div class="pct">${status}</div>
+    </div>`;
+  }).join('');
+}
+
+async function addFiles(files) {
+  let lastId = null;
+  for (const f of files) {
+    if (!/\.epub$/i.test(f.name)) { alert(`${f.name} isn't an EPUB file.`); continue; }
+    try {
+      const buf = await f.arrayBuffer();
+      const id = [...new Uint8Array(await crypto.subtle.digest('SHA-256', buf))].slice(0, 12).map(b => b.toString(16).padStart(2, '0')).join('');
+      if (!await getJSON(`/library/${id}.json`)) { // same file added twice -> just reopen it
+        const zip = await JSZip.loadAsync(buf), meta = await readMeta(zip);
+        const ext = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp' }[meta.cover?.type];
+        const cover = ext && zip.file(meta.cover.path) ? `${id}.${ext}` : null;
+        if (cover) await put(cover, await zip.file(meta.cover.path).async('blob'));
+        await put(`${id}.epub`, buf);
+        await put(`${id}.json`, JSON.stringify({
+          id, title: meta.title || f.name.replace(/\.epub$/i, ''), author: meta.author || '', cover,
+          p: 0, w: 0, total: 0, added: Date.now(), opened: 0, highlights: [],
+        }));
+      }
+      lastId = id;
+    } catch (e) { alert(`Couldn't add ${f.name}: ${e.message}`); }
+  }
+  if (files.length === 1 && lastId) location.hash = '#/book/' + lastId; else showLibrary();
+}
+
+$('#addBtn').onclick = () => $('#fileIn').click();
+$('#fileIn').onchange = e => { addFiles([...e.target.files]); e.target.value = ''; };
+$('#grid').onclick = async e => {
+  const b = e.target.closest('.rm');
+  if (!b || !confirm(`Remove “${b.dataset.title}” from your library? Its highlights and notes will be deleted too.`)) return;
+  await fetch('/library/' + b.dataset.id, { method: 'DELETE' });
+  showLibrary();
+};
+addEventListener('dragover', e => { if ($('#reader').hidden) { e.preventDefault(); document.body.classList.add('drag'); } });
+addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('drag'); });
+addEventListener('drop', e => {
+  e.preventDefault(); document.body.classList.remove('drag');
+  if ($('#reader').hidden && e.dataTransfer.files.length) addFiles([...e.dataTransfer.files]);
+});
+
+// ---------- reader ----------
+let state = null, paras = [], sections = [], els = [], cur = { p: 0, w: 0 }, last = null, lastTop = -1;
+let playing = false, gen = 0, follow = true, openTok = 0, saveT, curSection = -1;
+const audio = new Audio(), cache = new Map();
+let loaded = null; // paragraph whose audio is in <audio>, for instant resume
+
+async function openBook(id) {
+  stopReading();
+  const tok = ++openTok;
+  const st = await getJSON(`/library/${id}.json`);
+  if (tok !== openTok) return;
+  if (!st) { location.hash = ''; return; }
+  state = st;
+  $('#library').hidden = true; $('#reader').hidden = false;
+  document.title = state.title;
+  $('#title').textContent = state.title; $('#author').textContent = state.author;
+  $('#book').innerHTML = '<p class="loading">Opening book…</p>';
+  $('#toc').innerHTML = $('#notes').innerHTML = '';
+  scrollTo(0, 0);
+  try {
+    const buf = await (await fetch(`/library/${id}.epub`)).arrayBuffer();
+    ({ paras, sections } = await parseBook(await JSZip.loadAsync(buf)));
+  } catch (e) { $('#book').innerHTML = `<p class="loading">This book couldn't be opened: ${esc(e.message)}</p>`; return; }
+  if (tok !== openTok) return;
+
+  // One plain text node per paragraph, no per-word elements: a span per word made 170k+ nodes and
+  // froze text selection. Words are located by character offset instead (see starts / wordRange).
+  applyLayout();
+  $('#book').innerHTML = paras.map((x, i) => {
+    const t = x.h ? 'h3' : 'p';
+    return `<${t} data-p="${i}">${esc(x.words.join(' '))}</${t}>`;
+  }).join('');
+  els = $$('#book [data-p]');
+  startsCache = [];
+  cur = { p: Math.min(state.p || 0, paras.length - 1), w: state.w || 0 };
+  if (cur.w >= paras[cur.p].words.length) cur.w = 0;
+  state.total = paras.length; state.opened = Date.now();
+  last = null; lastTop = -1; curSection = -1; follow = true;
+  renderToc(); renderNotes(); paintHighlights();
+  spread = 0; highlight(); reveal(last, false);
+  save();
+}
+
+function stopReading() {
+  if (state) flush();
+  playing = false; gen++; audio.pause(); loaded = null; updatePlay();
+  hidePop(); closeMenu();
+}
+
+function save() {
+  if (!state) return;
+  state.p = cur.p; state.w = cur.w;
+  clearTimeout(saveT);
+  saveT = setTimeout(() => put(state.id + '.json', JSON.stringify(state)).catch(e => console.warn(e)), 500);
+}
+function flush() {
+  clearTimeout(saveT);
+  if (state) { state.p = cur.p; state.w = cur.w; put(state.id + '.json', JSON.stringify(state), true).catch(() => {}); }
+}
+addEventListener('pagehide', flush);
+
+// ---------- word <-> text offset ----------
+let startsCache = [];
+function starts(p) { // char offset of each word in paragraph p's text node
+  if (!startsCache[p]) { let n = 0; startsCache[p] = paras[p].words.map(w => (n += w.length + 1) - w.length - 1); }
+  return startsCache[p];
+}
+function wordAtOffset(p, off) { // index of the last word starting at or before off (binary search)
+  const st = starts(p); let lo = 0, hi = st.length - 1;
+  while (lo < hi) { const m = (lo + hi + 1) >> 1; st[m] <= off ? lo = m : hi = m - 1; }
+  return lo;
+}
+function wordRange(p1, w1, p2 = p1, w2 = w1) {
+  const a = els[p1]?.firstChild, b = els[p2]?.firstChild;
+  if (!a || !b || !paras[p2].words[w2]) return null;
+  const r = new Range();
+  r.setStart(a, starts(p1)[w1]); r.setEnd(b, starts(p2)[w2] + paras[p2].words[w2].length);
+  return r;
+}
+
+// current word + line highlight, auto-scroll to keep the line centred
+function highlight() {
+  last = wordRange(cur.p, cur.w);
+  if (!last) return;
+  let r = rectOf(last);
+  if (isPages() && follow && spreadAt(r) !== spread) { showSpread(spreadAt(r)); r = rectOf(last); } // auto page turn
+  placeBar(r);
+  const top = Math.round(r.top + scrollY); // page coordinate: stable while auto-scroll animates
+  if (!isPages() && Math.abs(top - lastTop) > 2) { lastTop = top; if (follow) centerOn(last); }
+  const pct = paras.length > 1 ? Math.round(cur.p / (paras.length - 1) * 100) : 0;
+  $('#pprog i').style.width = pct + '%';
+  if (!isPages()) $('#pct').textContent = pct + '%';
+  markSection();
+}
+const rectOf = range => range.getClientRects()[0] || range.getBoundingClientRect();
+function placeBar(r) {
+  const bar = $('#bar'), m = $('main').getBoundingClientRect(), b = $('#book').getBoundingClientRect();
+  let left = b.left + 10, width = b.width - 20;
+  if (isPages()) {
+    const g = geom(), col = Math.floor((r.left - b.left + 1) / g.step);
+    left = b.left + col * g.step - 14; width = g.colW + 28;
+    bar.hidden = Math.floor(col / g.cols) !== 0; // word is on another spread
+  } else bar.hidden = false;
+  Object.assign(bar.style, { top: r.top - m.top + 'px', height: r.height + 'px', left: left - m.left + 'px', width: width + 'px' });
+  const cw = $('#curw');
+  cw.hidden = bar.hidden;
+  Object.assign(cw.style, { top: r.top - m.top - 2 + 'px', height: r.height + 4 + 'px', left: r.left - m.left - 3 + 'px', width: r.width + 6 + 'px' });
+}
+
+// ---------- pages layout ----------
+let layout = ls('layout') === 'pages' ? 'pages' : 'scroll', spread = 0;
+const isPages = () => layout === 'pages' && document.body.classList.contains('pages');
+function geom() {
+  const b = $('#book'), cs = getComputedStyle(b), gap = parseFloat(cs.columnGap) || 0, cols = +cs.columnCount || 1;
+  const colW = (b.clientWidth - gap * (cols - 1)) / cols;
+  return { b, gap, cols, colW, step: colW + gap, spreadW: b.clientWidth + gap };
+}
+const lastSpread = () => { const g = geom(); return Math.max(0, Math.ceil((g.b.scrollWidth - 2) / g.spreadW) - 1); };
+function spreadAt(r) { // which spread a viewport rect is on
+  const g = geom(), x = r.left - g.b.getBoundingClientRect().left + g.b.scrollLeft;
+  return Math.floor(Math.floor((x + 1) / g.step) / g.cols);
+}
+function showSpread(n) {
+  const g = geom();
+  spread = Math.min(Math.max(0, n), lastSpread());
+  g.b.scrollLeft = Math.round(spread * g.spreadW);
+  const first = spread * g.cols + 1, total = (lastSpread() + 1) * g.cols;
+  $('#pct').textContent = g.cols > 1 ? `${first}–${first + 1} of ${total}` : `${first} of ${total}`;
+  if (last) placeBar(rectOf(last));
+  paintHighlights();
+}
+function turn(dir) {
+  if (!isPages()) return;
+  if (follow) setFollow(false);
+  showSpread(spread + dir);
+}
+function firstWordOnSpread() {
+  const b = $('#book').getBoundingClientRect();
+  for (let y = b.top + 4; y < b.bottom; y += 12) { const w = wordAtPoint(b.left + 4, y); if (w) return w; }
+  return null;
+}
+function applyLayout() {
+  document.body.classList.toggle('pages', layout === 'pages' && !$('#reader').hidden);
+  $$('[data-layout]').forEach(b => b.setAttribute('aria-checked', b.dataset.layout === layout));
+  $('#pct').style.width = isPages() ? 'auto' : '';
+}
+function setLayout(l) {
+  layout = l; ls('layout', l);
+  applyLayout();
+  if (!state) return;
+  if (!isPages()) $('#pct').textContent = '';
+  lastTop = -9999; spread = 0;
+  highlight(); reveal(last, false); paintHighlights();
+}
+$$('[data-layout]').forEach(b => b.onclick = () => setLayout(b.dataset.layout));
+$('#prevPage').onclick = () => turn(-1);
+$('#nextPage').onclick = () => turn(1);
+new ResizeObserver(() => { // window/sidebar/font changes reflow the columns
+  if (!state || !last) return;
+  if (isPages()) showSpread(follow ? spreadAt(rectOf(last)) : spread);
+  placeBar(rectOf(last)); paintHighlights();
+}).observe($('#book'));
+
+// bring a range into view: centre it (scroll) or turn to its spread (pages)
+function reveal(range, smooth = true) {
+  if (!range) return;
+  if (isPages()) showSpread(spreadAt(rectOf(range)));
+  else centerOn(range, smooth);
+}
+function centerOn(el, smooth = true) {
+  if (!el) return;
+  const r = el.getBoundingClientRect(), mid = (64 + innerHeight - 110) / 2; // middle of the area between top bar and player
+  scrollBy({ top: r.top + r.height / 2 - mid, behavior: smooth ? 'smooth' : 'instant' });
+}
+function setFollow(on) {
+  follow = on;
+  $('#resume').hidden = on || !state;
+  if (on) reveal(last);
+}
+// user scrolling/swiping by hand stops the auto-follow until they jump back; in pages mode it turns pages
+let wheelAcc = 0, wheelLock = 0;
+addEventListener('wheel', e => {
+  if (!state || $('#reader').hidden || e.target.closest('#side, .pop')) return;
+  if (!isPages()) { if (follow) setFollow(false); return; }
+  if (Date.now() < wheelLock) { wheelAcc = 0; return; } // swallow trackpad momentum after a turn
+  wheelAcc += Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+  if (Math.abs(wheelAcc) > 40) { turn(Math.sign(wheelAcc)); wheelAcc = 0; wheelLock = Date.now() + 500; }
+}, { passive: true });
+addEventListener('touchmove', () => state && follow && setFollow(false), { passive: true });
+$('#resume').onclick = () => setFollow(true);
+
+function jump(p, w = 0) {
+  if (!state || p < 0 || p >= paras.length) return;
+  gen++; audio.pause(); loaded = null;
+  cur = { p, w };
+  follow = true; $('#resume').hidden = true;
+  lastTop = -1;
+  playing ? speak(p, w) : (highlight(), save());
+}
+
+// ---------- speech (Kokoro via server.py) ----------
+// speech is generated in sentence-sized chunks so playback starts fast even on long paragraphs
+function chunkEnd(p, w) {
+  const ws = paras[p].words;
+  for (let i = w; i < ws.length; i++) {
+    const n = i - w + 1;
+    if ((n >= 12 && /[.!?;:]["”’)\]]*$/.test(ws[i])) || (n >= 30 && /,["”’)\]]*$/.test(ws[i])) || n >= 45) return i + 1;
+  }
+  return ws.length;
+}
+const nextChunk = (p, w) => { const e = chunkEnd(p, w); return e < paras[p].words.length ? [p, e] : [p + 1, 0]; };
+
+function tts(p, w) {
+  const k = `${voice}:${p}:${w}`;
+  if (!cache.has(k)) cache.set(k, fetch('/tts', {
+    method: 'POST', body: JSON.stringify({ text: paras[p].words.slice(w, chunkEnd(p, w)).join(' '), voice }),
+  }).then(r => r.ok ? r.json() : Promise.reject(new Error('the voice server said ' + r.status)))
+    .catch(e => { cache.delete(k); throw e; }));
+  return cache.get(k);
+}
+
+async function speak(p, w) {
+  const my = ++gen;
+  audio.pause(); loaded = null;
+  if (p >= paras.length) { playing = false; updatePlay(); return; }
+  cur = { p, w }; highlight(); save();
+  for (const k of cache.keys()) if (+k.split(':')[1] < p) cache.delete(k);
+  $('#play').classList.add('busy');
+  let d;
+  try { d = await tts(p, w); }
+  catch (e) {
+    if (my === gen) { $('#play').classList.remove('busy'); playing = false; updatePlay(); alert(`Couldn't generate speech. Is server.py running? (${e.message})`); }
+    return;
+  }
+  if (my !== gen || !playing) return;
+  $('#play').classList.remove('busy');
+  const [np, nw] = nextChunk(p, w);
+  if (np < paras.length) tts(np, nw).catch(() => {}); // prefetch the next chunk while this one plays
+  audio.src = 'data:audio/wav;base64,' + d.audio;
+  audio.playbackRate = audio.defaultPlaybackRate = rate; // preservesPitch is on by default
+  audio.onended = () => my === gen && playing && speak(np, nw);
+  loaded = p;
+  audio.play();
+  const tick = () => {
+    if (my !== gen || cur.p !== p) return;
+    if (audio.paused) return requestAnimationFrame(tick); // don't fight position changes made while paused
+    let i = 0;
+    while (i + 1 < d.words.length && d.words[i + 1][1] <= audio.currentTime) i++;
+    if (d.words.length && w + d.words[i][0] !== cur.w) { cur.w = w + d.words[i][0]; highlight(); }
+    requestAnimationFrame(tick);
+  };
+  tick();
+}
+
+function setPlaying(on) {
+  if (!state) return;
+  playing = on; updatePlay();
+  if (!on) { audio.pause(); $('#play').classList.remove('busy'); save(); return; }
+  // paged away from the reading position while paused: start reading from the page being looked at
+  if (isPages() && !follow && last && spreadAt(rectOf(last)) !== spread) {
+    const w = firstWordOnSpread();
+    if (w) { cur = w; loaded = null; }
+  }
+  setFollow(true);
+  if (loaded === cur.p && !audio.ended) audio.play(); else speak(cur.p, cur.w);
+}
+function updatePlay() {
+  $('#play').innerHTML = icon(playing ? 'pause' : 'play');
+  $('#play').setAttribute('aria-label', playing ? 'Pause' : 'Play');
+}
+
+$('#play').onclick = () => setPlaying(!playing);
+$('#back').onclick = () => {
+  if (loaded === cur.p && audio.currentTime > 1.5) { audio.currentTime = Math.max(0, audio.currentTime - 10); lastTop = -1; }
+  else jump(Math.max(0, cur.p - 1));
+};
+$('#fwd').onclick = () => {
+  if (loaded === cur.p && audio.duration - audio.currentTime > 10) { audio.currentTime += 10; lastTop = -1; }
+  else jump(cur.p + 1);
+};
+
+// ---------- player menus (voice, speed) ----------
+function openMenu(btn, html, bind) {
+  const m = $('#menu');
+  if (!m.hidden && m.dataset.for === btn.id) return closeMenu();
+  m.innerHTML = html; m.dataset.for = btn.id; m.hidden = false;
+  bind(m);
+  const r = btn.getBoundingClientRect();
+  m.style.left = Math.min(Math.max(12, r.left + r.width / 2 - m.offsetWidth / 2), innerWidth - m.offsetWidth - 12) + 'px';
+  m.style.top = (r.top - m.offsetHeight - 22) + 'px';
+}
+function closeMenu() { $('#menu').hidden = true; }
+
+function setVoiceUI() { $('#voiceBtn .flag').textContent = VOICES.find(v => v[0] === voice)[2]; }
+$('#voiceBtn').onclick = e => openMenu(e.currentTarget,
+  `<div class="menu-list" role="menu">${VOICES.map(([id, name, flag]) =>
+    `<button role="menuitemradio" aria-checked="${id === voice}" data-v="${id}"><span class="flag">${flag}</span>${name}</button>`).join('')}</div>`,
+  m => m.onclick = ev => {
+    const b = ev.target.closest('[data-v]'); if (!b) return;
+    voice = b.dataset.v; ls('voice', voice); setVoiceUI(); closeMenu();
+    if (playing) jump(cur.p, cur.w);
+  });
+
+function setRate(r) {
+  rate = Math.round(r * 100) / 100; ls('rate', rate);
+  audio.playbackRate = audio.defaultPlaybackRate = rate; // live, no regeneration
+  $('#speedBtn').textContent = (+rate.toFixed(2)) + '×';
+}
+$('#speedBtn').onclick = e => openMenu(e.currentTarget,
+  `<div class="speeds" role="radiogroup">${[0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3].map(s =>
+    `<button role="radio" aria-checked="${s === rate}" data-s="${s}">${s}×</button>`).join('')}</div>
+   <input type="range" min="0.5" max="3" step="0.05" value="${rate}" aria-label="Speed">`,
+  m => {
+    m.querySelector('.speeds').onclick = ev => {
+      const b = ev.target.closest('[data-s]'); if (!b) return;
+      setRate(+b.dataset.s); m.querySelector('input').value = rate;
+      m.querySelectorAll('[data-s]').forEach(x => x.setAttribute('aria-checked', +x.dataset.s === rate));
+    };
+    m.querySelector('input').oninput = ev => {
+      setRate(+ev.target.value);
+      m.querySelectorAll('[data-s]').forEach(x => x.setAttribute('aria-checked', +x.dataset.s === rate));
+    };
+  });
+
+// ---------- text size ----------
+function setFs(v) {
+  fs = Math.min(32, Math.max(16, v)); ls('fs', fs);
+  document.documentElement.style.setProperty('--fs', fs + 'px');
+  if (state) { lastTop = -1; highlight(); paintHighlights(); } // pages mode: #book size is fixed, so no resize event
+}
+$('#smaller').onclick = () => setFs(fs - 2);
+$('#bigger').onclick = () => setFs(fs + 2);
+
+// ---------- themes ----------
+let theme = ls('theme') || 'calm', autoDark = ls('autoDark') === '1';
+const darkMQ = matchMedia('(prefers-color-scheme: dark)');
+function applyTheme() {
+  const t = autoDark && darkMQ.matches ? 'quiet' : theme;
+  document.documentElement.dataset.theme = t;
+  $$('.tile').forEach(b => b.setAttribute('aria-checked', b.dataset.theme === theme));
+  $('#autoDark').setAttribute('aria-pressed', autoDark);
+  if (state && last) { // the typeface may change, which reflows the text
+    lastTop = -1; highlight();
+    if (isPages()) showSpread(follow ? spreadAt(rectOf(last)) : spread);
+    paintHighlights();
+  }
+}
+darkMQ.addEventListener('change', applyTheme);
+$$('.tile').forEach(b => b.onclick = () => { theme = b.dataset.theme; ls('theme', theme); applyTheme(); });
+$('#autoDark').onclick = () => { autoDark = !autoDark; ls('autoDark', autoDark ? '1' : ''); applyTheme(); };
+$('#themesBtn').onclick = () => {
+  const p = $('#themes');
+  if (!p.hidden) { p.hidden = true; return; }
+  p.hidden = false;
+  const r = $('#themesBtn').getBoundingClientRect();
+  p.style.top = r.bottom + 10 + 'px';
+  p.style.left = Math.max(12, Math.min(r.right - p.offsetWidth + 8, innerWidth - p.offsetWidth - 12)) + 'px';
+};
+applyTheme();
+
+// ---------- sidebar (contents + notes) ----------
+function openSide(tab) {
+  const open = document.body.classList.contains('side-open');
+  if (open && $('#side').dataset.tab === tab) return closeSide();
+  $('#side').dataset.tab = tab; ls('side', tab);
+  document.body.classList.add('side-open');
+  $$('.side-tabs [data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === tab));
+  $$('[data-panel]').forEach(b => b.setAttribute('aria-pressed', b.dataset.panel === tab));
+  $('#toc').hidden = tab !== 'toc'; $('#notes').hidden = tab !== 'notes';
+  if (tab === 'toc') $('#toc [aria-current=true]')?.scrollIntoView({ block: 'center' });
+}
+function closeSide() {
+  document.body.classList.remove('side-open'); ls('side', '');
+  $$('[data-panel]').forEach(b => b.setAttribute('aria-pressed', false));
+}
+$$('[data-panel]').forEach(b => b.onclick = () => openSide(b.dataset.panel));
+$$('.side-tabs [data-tab]').forEach(b => b.onclick = () => openSide(b.dataset.tab));
+$('#sideClose').onclick = closeSide;
+const narrow = () => matchMedia('(max-width: 1179px)').matches;
+
+function renderToc() {
+  $('#toc').innerHTML = sections.length
+    ? sections.map((s, i) => `<button data-s="${i}" style="--d:${Math.min(s.depth, 3)}">${esc(s.label)}</button>`).join('')
+    : '<div class="side-empty">This book has no table of contents.</div>';
+}
+$('#toc').onclick = e => {
+  const b = e.target.closest('[data-s]'); if (!b) return;
+  jump(sections[+b.dataset.s].p);
+  if (narrow()) closeSide();
+};
+function markSection() {
+  let i = -1;
+  for (let k = 0; k < sections.length; k++) if (sections[k].p <= cur.p) i = k;
+  if (i === curSection) return;
+  $(`#toc [data-s="${curSection}"]`)?.removeAttribute('aria-current');
+  curSection = i;
+  const b = $(`#toc [data-s="${i}"]`);
+  if (b) { b.setAttribute('aria-current', 'true'); if (!$('#toc').hidden) b.scrollIntoView({ block: 'nearest' }); }
+}
+
+// ---------- highlights & notes ----------
+const cmp = (a, b) => a.p - b.p || a.w - b.w;
+const hlStart = h => ({ p: h.p1, w: h.w1 }), hlEnd = h => ({ p: h.p2, w: h.w2 });
+const hlAt = pos => state.highlights.find(h => cmp(hlStart(h), pos) <= 0 && cmp(pos, hlEnd(h)) <= 0);
+const textOf = (a, b) => {
+  const out = [];
+  for (let p = a.p; p <= b.p; p++) out.push(paras[p].words.slice(p === a.p ? a.w : 0, p === b.p ? b.w + 1 : undefined).join(' '));
+  return out.join('\n');
+};
+const rangeOf = h => wordRange(h.p1, h.w1, h.p2, h.w2);
+// draw saved highlights as boxes behind the text; re-run after anything that moves text (resize, font, page turn)
+function paintHighlights() {
+  if (!state) return;
+  const m = $('main').getBoundingClientRect(), bk = $('#book').getBoundingClientRect();
+  let html = '';
+  for (const h of state.highlights) {
+    for (let p = h.p1; p <= h.p2; p++) { // one range per paragraph so we only get text-line rects
+      const r = paras[p] && wordRange(p, p === h.p1 ? h.w1 : 0, p, p === h.p2 ? h.w2 : paras[p].words.length - 1);
+      if (!r) continue;
+      for (const q of r.getClientRects()) {
+        if (q.width < 1 || q.right < bk.left || q.left > bk.right) continue; // off the visible spread
+        html += `<i class="${h.note ? 'note' : ''}" style="left:${q.left - m.left - 1}px;top:${q.top - m.top}px;width:${q.width + 2}px;height:${q.height}px;background:var(--${h.color})"></i>`;
+      }
+    }
+  }
+  $('#marks').innerHTML = html;
+}
+function renderNotes() {
+  const hs = [...state.highlights].sort((a, b) => cmp(hlStart(a), hlStart(b)));
+  $('#ncount').textContent = hs.length || '';
+  $('#notes').innerHTML = hs.length
+    ? hs.map(h => `<button class="note-item" data-id="${h.id}" style="--c:var(--${h.color})">
+        <q>${esc(h.text)}</q>${h.note ? `<p>${esc(h.note)}</p>` : ''}</button>`).join('')
+    : '<div class="side-empty">Select any text in the book to highlight it or add a note.</div>';
+}
+$('#notes').onclick = e => {
+  const b = e.target.closest('[data-id]'); if (!b) return;
+  const h = state.highlights.find(x => x.id === b.dataset.id);
+  if (!h) return;
+  if (!playing) jump(h.p1, h.w1);
+  else setFollow(false); // peek at the note without stopping playback
+  reveal(rangeOf(h));
+  if (narrow()) closeSide();
+};
+function changed() { paintHighlights(); renderNotes(); save(); }
+
+// selection popover
+let sel = null; // { p1,w1,p2,w2, hl }
+// selection boundary (node, offset) -> first/last fully-or-partly selected word
+function wordPos(node, off, isEnd) {
+  let p, w;
+  if (node.nodeType === 3) {
+    const pe = node.parentElement?.closest('[data-p]');
+    if (!pe) return null;
+    p = +pe.dataset.p; w = wordAtOffset(p, off);
+    const st = starts(p);
+    if (isEnd && off <= st[w]) w--;                                    // ends right at a word's start
+    if (!isEnd && off > st[w] + paras[p].words[w].length - 1) w++;     // starts in the gap after a word
+  } else if (node.matches?.('[data-p]')) {                              // boundary inside an empty/whole paragraph
+    p = +node.dataset.p; w = off === 0 ? (isEnd ? -1 : 0) : (isEnd ? paras[p].words.length - 1 : paras[p].words.length);
+  } else {                                                              // boundary between paragraphs
+    const child = node.childNodes[off];
+    let pe = isEnd ? (child ? child.previousElementSibling : node.lastElementChild) : child;
+    while (pe && !pe.matches?.('[data-p]')) pe = isEnd ? pe.previousElementSibling : pe.nextElementSibling;
+    if (!pe) return null;
+    p = +pe.dataset.p; w = isEnd ? paras[p].words.length - 1 : 0;
+  }
+  if (w < 0) { if (--p < 0) return null; w = paras[p].words.length - 1; }
+  if (w >= paras[p].words.length) { if (++p >= paras.length) return null; w = 0; }
+  return { p, w };
+}
+function wordAtPoint(x, y) {
+  const c = document.caretPositionFromPoint?.(x, y), r = c ? null : document.caretRangeFromPoint?.(x, y);
+  const node = c ? c.offsetNode : r?.startContainer, off = c ? c.offset : r?.startOffset;
+  const pe = node?.nodeType === 3 && node.parentElement.closest('[data-p]');
+  if (!pe) return null;
+  const p = +pe.dataset.p;
+  return { p, w: wordAtOffset(p, off) };
+}
+
+function openPop(target, rect) {
+  sel = target;
+  const pop = $('#pop');
+  pop.querySelector('.acts-wrap').hidden = false;
+  pop.querySelector('.noteedit').hidden = true;
+  $('#unhl').hidden = !sel.hl;
+  pop.querySelectorAll('[data-c]').forEach(b => b.setAttribute('aria-pressed', sel.hl?.color === b.dataset.c));
+  $('#actNote').lastElementChild.textContent = sel.hl?.note ? 'Edit note' : 'Add a note';
+  $('#actCopy').lastElementChild.textContent = 'Copy';
+  pop.hidden = false;
+  placePop(rect);
+}
+function placePop(rect) {
+  const pop = $('#pop'), w = pop.offsetWidth, h = pop.offsetHeight;
+  pop.style.left = Math.min(Math.max(12, rect.left + rect.width / 2 - w / 2), innerWidth - w - 12) + 'px';
+  const below = rect.bottom + 12;
+  const top = below + h < innerHeight - 110 ? below : rect.top - h - 12;
+  pop.style.top = Math.min(Math.max(76, top), innerHeight - h - 12) + 'px';
+}
+function hidePop() { $('#pop').hidden = true; sel = null; }
+
+function onSelect() {
+  const s = getSelection();
+  if (s.isCollapsed || !s.rangeCount || !state) return;
+  const r = s.getRangeAt(0);
+  if (!$('#book').contains(r.commonAncestorContainer)) return;
+  const a = wordPos(r.startContainer, r.startOffset, false), b = wordPos(r.endContainer, r.endOffset, true);
+  if (!a || !b || cmp(a, b) > 0) return;
+  openPop({ p1: a.p, w1: a.w, p2: b.p, w2: b.w, hl: null }, r.getBoundingClientRect());
+}
+$('#book').addEventListener('mouseup', () => setTimeout(onSelect));
+$('#book').addEventListener('keyup', e => e.shiftKey && onSelect());
+$('#book').onclick = e => {
+  if (!getSelection().isCollapsed) return;
+  const pos = wordAtPoint(e.clientX, e.clientY); if (!pos) return;
+  const h = hlAt(pos);
+  if (e.altKey) { jump(pos.p, pos.w); return; } // ⌥-click: read from this word
+  if (h) {
+    const hr = rangeOf(h).getBoundingClientRect();
+    openPop({ ...h, hl: h }, hr.height > 200 ? wordRange(pos.p, pos.w).getBoundingClientRect() : hr);
+  } // plain clicks do nothing else, so selecting text for a note never moves playback
+};
+
+function upsert(color) {
+  if (sel.hl) { if (color) sel.hl.color = color; return sel.hl; }
+  const a = { p: sel.p1, w: sel.w1 }, b = { p: sel.p2, w: sel.w2 };
+  const overlapping = state.highlights.filter(h => cmp(hlStart(h), b) <= 0 && cmp(a, hlEnd(h)) <= 0);
+  state.highlights = state.highlights.filter(h => !overlapping.includes(h)); // new highlight replaces any it overlaps
+  const h = { id: crypto.randomUUID(), ...sel, hl: undefined, color: color || 'yellow',
+              note: overlapping.map(o => o.note).filter(Boolean).join('\n\n'), text: textOf(a, b), created: Date.now() };
+  delete h.hl;
+  state.highlights.push(h);
+  sel.hl = h;
+  return h;
+}
+$('#pop').querySelectorAll('[data-c]').forEach(b => b.onclick = () => { upsert(b.dataset.c); changed(); getSelection().removeAllRanges(); hidePop(); });
+$('#unhl').onclick = () => {
+  state.highlights = state.highlights.filter(h => h !== sel.hl);
+  changed(); hidePop();
+};
+$('#actRead').onclick = () => { const p = sel.p1, w = sel.w1; getSelection().removeAllRanges(); hidePop(); jump(p, w); setPlaying(true); };
+$('#actCopy').onclick = async () => {
+  await navigator.clipboard.writeText(textOf({ p: sel.p1, w: sel.w1 }, { p: sel.p2, w: sel.w2 }));
+  $('#actCopy').lastElementChild.textContent = 'Copied';
+  setTimeout(hidePop, 600);
+};
+$('#actNote').onclick = () => {
+  $('#pop .acts-wrap').hidden = true; $('#pop .noteedit').hidden = false;
+  $('#noteText').value = sel.hl?.note || '';
+  $('#noteText').focus();
+};
+$('#noteCancel').onclick = hidePop;
+$('#noteSave').onclick = () => {
+  const h = upsert(sel.hl ? null : 'yellow');
+  h.note = $('#noteText').value.trim();
+  changed(); getSelection().removeAllRanges(); hidePop();
+};
+$('#noteText').onkeydown = e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) $('#noteSave').click(); };
+
+document.addEventListener('mousedown', e => {
+  if (!$('#pop').hidden && !e.target.closest('#pop')) hidePop();
+  if (!$('#menu').hidden && !e.target.closest('#menu, #voiceBtn, #speedBtn')) closeMenu();
+  if (!$('#themes').hidden && !e.target.closest('#themes, #themesBtn')) $('#themes').hidden = true;
+});
+// close the popover on the user's own scrolling only (auto-scroll while reading must not close it)
+addEventListener('wheel', () => { if (!$('#pop').hidden && $('#pop .noteedit').hidden) hidePop(); }, { passive: true });
+
+// ---------- keyboard ----------
+// a mouse click shouldn't leave focus on the button, or Space/arrows would go to it instead of the reader
+addEventListener('click', e => { if (e.detail > 0) e.target.closest('button')?.blur(); });
+addEventListener('keydown', e => {
+  if (e.key === 'Escape') { hidePop(); closeMenu(); $('#themes').hidden = true; return; }
+  if (!state || $('#reader').hidden || e.target.closest('input, textarea, select, button') || e.metaKey || e.ctrlKey) return;
+  if (e.code === 'Space') { e.preventDefault(); setPlaying(!playing); }
+  else if (e.key === ']' || e.key === '[') {
+    e.preventDefault();
+    setRate(Math.min(3, Math.max(0.5, rate + (e.key === ']' ? 0.1 : -0.1))));
+    toast(`Speed ${+rate.toFixed(2)}×`);
+  }
+  else if (isPages() && ['ArrowRight', 'ArrowLeft', 'PageDown', 'PageUp'].includes(e.code)) {
+    e.preventDefault(); turn(e.code === 'ArrowRight' || e.code === 'PageDown' ? 1 : -1);
+  }
+  else if (e.code === 'ArrowRight') { e.preventDefault(); jump(cur.p + 1); }
+  else if (e.code === 'ArrowLeft') { e.preventDefault(); jump(cur.p - 1); }
+  else if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.code) && follow) setFollow(false);
+});
+
+// ---------- player auto-hide + toast ----------
+let idleT, toastT;
+function wake() {
+  document.body.classList.remove('idle');
+  clearTimeout(idleT);
+  idleT = setTimeout(() => {
+    if (!$('#menu').hidden || $('#player').matches(':hover')) return wake(); // keep it while in use
+    document.body.classList.add('idle');
+  }, 2500);
+}
+addEventListener('mousemove', wake, { passive: true });
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 1100);
+}
+
+// ---------- boot ----------
+wake();
+setVoiceUI(); setRate(rate); setFs(fs); updatePlay();
+if (ls('side') && !narrow()) openSide(ls('side'));
+function route() {
+  const m = location.hash.match(/^#\/book\/([0-9a-f]{24})$/);
+  m ? openBook(m[1]) : showLibrary();
+}
+addEventListener('hashchange', route);
+route();
+</script>

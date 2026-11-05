@@ -1,0 +1,6 @@
+# your books, reading progress and notes stay on your machine
+library/
+.webview/
+.venv/
+__pycache__/
+.DS_Store
