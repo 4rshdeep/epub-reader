@@ -15,7 +15,7 @@ Works with DRM-free EPUBs (e.g. [Standard Ebooks](https://standardebooks.org), [
 ## Install (macOS, Apple Silicon recommended)
 
 ```sh
-git clone https://github.com/<you>/epub-reader.git
+git clone https://github.com/4rshdeep/epub-reader.git
 cd epub-reader
 ./setup.sh
 ```
